@@ -98,7 +98,7 @@ def read_central_lightcurve(fits_path):
     #     return None
 
 ### Define function to search traneint events
-def detect_transients(lightcurve, noise, n_sigma):
+def detect_transients(lightcurve, error, n_sigma):
     if lightcurve is None or len(lightcurve) == 0:
         return []
 
@@ -106,7 +106,7 @@ def detect_transients(lightcurve, noise, n_sigma):
     # median = np.median(lightcurve)
     # mad = np.median(np.abs(lightcurve - median))
     # sigma = error
-    threshold = n_sigma * noise
+    threshold = n_sigma * np.abs(error)  # Using provided error as noise estimate
     #print(f'Median:{median}')
     #print(f'Threshold: {threshold}')
 
@@ -137,7 +137,7 @@ def detect_transients(lightcurve, noise, n_sigma):
         
         peak_flux = np.max(lightcurve[start:end+1])
         median = np.median(lightcurve)
-        sigma = np.median(noise)
+        sigma = np.median(np.abs(error))
         snr = (peak_flux - median) / sigma
         snr = round(snr, 3) 
         
