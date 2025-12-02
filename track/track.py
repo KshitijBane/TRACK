@@ -45,9 +45,6 @@ def dec_formatter(x, pos):
     dec_angle = Angle(x, unit=u.deg)
     return dec_angle.to_string(unit=u.deg, sep=':', precision=1, alwayssign=True, pad=True)
 
-
-
-
 def extract_source_id(filename):
     match = re.search(r"source_(\d+)_cube\.fits", filename)
     return int(match.group(1)) if match else None
@@ -80,7 +77,7 @@ def read_central_lightcurve(fits_path):
             dec = crval2
 
             #Lightcurve
-            data = hdul[0].data
+            data = hdul[0].data*factor #from Jy/beam to Jy/pixel
             size = 10
             offset = 40
             lightcurve = data[:, y-size:y+size, x-size:y+size]
@@ -89,12 +86,13 @@ def read_central_lightcurve(fits_path):
 
             error = data[:, y-size+offset:y+size+offset,x-size+offset:x+size+offset]
             error = np.nansum(error,axis=(1,2))
-            error = np.abs(error)
+            # error = np.abs(error)/
             # error = error*factor
 
             lightcurve = np.where(np.isnan(lightcurve), np.nanmedian(lightcurve), lightcurve)
             error = np.where(np.isnan(error), np.nanmedian(error), error)
             return lightcurve, error, data, ra, dec
+        
     except Exception as e:
         print(f"Error reading {fits_path}: {e}")
         return None
@@ -157,7 +155,8 @@ def plot_lightcurve_with_events(lightcurve, error, source_id, events, output_dir
     #plt.figure(figsize=(10, 5), constrained_layout=True)
     plt.plot(lightcurve, label='Flux', color='tab:blue', zorder = 2)
     # plt.plot(error, label = 'Error', color='tab:green')
-    plt.errorbar(np.arange(len(lightcurve)), lightcurve, yerr=error, fmt='none', ecolor='green', alpha=0.5, zorder = 1)
+    plot_error = np.abs(error)
+    plt.errorbar(np.arange(len(lightcurve)), lightcurve, yerr=plot_error, fmt='none', ecolor='green', alpha=0.5, zorder = 1)
 
 
     if len(events) > 0:
@@ -184,7 +183,7 @@ def plot_lightcurve_with_events(lightcurve, error, source_id, events, output_dir
 
 
     plt.xlabel("Time Slice Index")
-    plt.ylabel("Flux (Jy/beam)")
+    plt.ylabel("Flux (Jy)")
     plt.ylim([-0.5,4])
     plt.title(f"Lightcurve for Source {source_id} (Central Pixel)")
     plt.grid(True)
@@ -483,7 +482,7 @@ def main():
         A log file for the code run will be saved with input values.
         (Kshitij July 2025 for the LPT project @NCRA)
         """),
-        epilog=("""Example:\n  track  complete/path/to/cubes --sigma 10 --w 0 --sep 20
+        epilog=("""Example:\n  track  path/to/trap.csv path/to/trap_job_dir complete/path/to/cubes --sigma 10 --w 0 --sep 20
         """)
     )
     
@@ -645,7 +644,7 @@ def main():
 
             primary_hdu = fits.PrimaryHDU(time_cube, header=hdr)
             hdul = fits.HDUList([primary_hdu, table])
-            hdul.writeto(f"{outdir}/source_{id+2}_cube.fits", overwrite=True)
+            hdul.writeto(f"{outdir}/source_{id+1}_cube.fits", overwrite=True)
             hdul.close()
             
             # Save time series plot
