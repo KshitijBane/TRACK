@@ -50,7 +50,7 @@ def extract_source_id(filename):
     return int(match.group(1)) if match else None
 
 def read_central_lightcurve(fits_path):
-    try:
+    # try:
         with fits.open(fits_path) as hdul:
             #Central pixel
             header = hdul[0].header
@@ -93,9 +93,9 @@ def read_central_lightcurve(fits_path):
             error = np.where(np.isnan(error), np.nanmedian(error), error)
             return lightcurve, error, data, ra, dec
         
-    except Exception as e:
-        print(f"Error reading {fits_path}: {e}")
-        return None
+    # except Exception as e:
+    #     print(f"Error reading {fits_path}: {e}")
+    #     return None
 
 ### Define function to search traneint events
 def detect_transients(lightcurve, error, n_sigma):
