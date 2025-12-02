@@ -51,47 +51,47 @@ def extract_source_id(filename):
 
 def read_central_lightcurve(fits_path):
     # try:
-        with fits.open(fits_path) as hdul:
-            #Central pixel
-            header = hdul[0].header
-            crpix1 = header['CRPIX1']
-            crval1 = header['CRVAL1']
-            #cdelt1 = header['CDELT1']
+    with fits.open(fits_path) as hdul:
+        #Central pixel
+        header = hdul[0].header
+        crpix1 = header['CRPIX1']
+        crval1 = header['CRVAL1']
+        #cdelt1 = header['CDELT1']
 
-            crpix2 = header['CRPIX2']
-            crval2 = header['CRVAL2']
-            #cdelt2 = header['CDELT2']
+        crpix2 = header['CRPIX2']
+        crval2 = header['CRVAL2']
+        #cdelt2 = header['CDELT2']
 
-            x=crpix1
-            y=crpix2
-            #x,y=20,20
+        x=crpix1
+        y=crpix2
+        #x,y=20,20
 
-                
-            pixel_area = abs(header['CDELT1']) * abs(header['CDELT2'])
-            # print(f'pixel area in arcseconds = {pixel_area * 3600} arcsec^2')
-            beam_area = 1.133 * header['BMAJ'] * header['BMIN']
+            
+        # pixel_area = abs(header['CDELT1']) * abs(header['CDELT2'])
+        # # print(f'pixel area in arcseconds = {pixel_area * 3600} arcsec^2')
+        # beam_area = 1.133 * header['BMAJ'] * header['BMIN']
 
-            factor = pixel_area / beam_area
+        # factor = pixel_area / beam_area
 
-            ra = crval1
-            dec = crval2
+        ra = crval1
+        dec = crval2
 
-            #Lightcurve
-            data = hdul[0].data*factor #from Jy/beam to Jy/pixel
-            size = 10
-            offset = 40
-            lightcurve = data[:, y-size:y+size, x-size:y+size]
-            lightcurve = np.nansum(lightcurve,axis=(1,2))
-            # lightcurve = lightcurve*factor
+        #Lightcurve
+        data = hdul[0].data
+        size = 10
+        offset = 40
+        lightcurve = data[:, y-size:y+size, x-size:y+size]
+        lightcurve = np.nansum(lightcurve,axis=(1,2))
+        # lightcurve = lightcurve*factor
 
-            error = data[:, y-size+offset:y+size+offset,x-size+offset:x+size+offset]
-            error = np.nansum(error,axis=(1,2))
-            # error = np.abs(error)/
-            # error = error*factor
+        error = data[:, y-size+offset:y+size+offset,x-size+offset:x+size+offset]
+        error = np.nansum(error,axis=(1,2))
+        # error = np.abs(error)/
+        # error = error*factor
 
-            lightcurve = np.where(np.isnan(lightcurve), np.nanmedian(lightcurve), lightcurve)
-            error = np.where(np.isnan(error), np.nanmedian(error), error)
-            return lightcurve, error, data, ra, dec
+        lightcurve = np.where(np.isnan(lightcurve), np.nanmedian(lightcurve), lightcurve)
+        error = np.where(np.isnan(error), np.nanmedian(error), error)
+        return lightcurve, error, data, ra, dec
         
     # except Exception as e:
     #     print(f"Error reading {fits_path}: {e}")
@@ -183,7 +183,7 @@ def plot_lightcurve_with_events(lightcurve, error, source_id, events, output_dir
 
 
     plt.xlabel("Time Slice Index")
-    plt.ylabel("Flux (Jy)")
+    plt.ylabel("Flux (Jy/beam)")
     plt.ylim([-0.5,4])
     plt.title(f"Lightcurve for Source {source_id} (Central Pixel)")
     plt.grid(True)
