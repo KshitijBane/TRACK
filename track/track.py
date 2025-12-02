@@ -103,7 +103,7 @@ def detect_transients(lightcurve, error, n_sigma):
         return []
 
     # Compute robust baseline
-    median = np.median(error)
+    median = np.median(lightcurve)
     mad = np.median(np.abs(lightcurve - median))
     sigma = 1.4826 * mad
     threshold = median + n_sigma * sigma
