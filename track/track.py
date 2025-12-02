@@ -78,8 +78,8 @@ def read_central_lightcurve(fits_path):
 
         #Lightcurve
         data = hdul[0].data
-        size = 10
-        offset = 40
+        size = 5
+        offset = 20
         lightcurve = data[:, y-size:y+size, x-size:y+size]
         lightcurve = np.nansum(lightcurve,axis=(1,2))
         # lightcurve = lightcurve*factor
@@ -103,10 +103,10 @@ def detect_transients(lightcurve, error, n_sigma):
         return []
 
     # Compute robust baseline
-    median = np.median(lightcurve)
-    mad = np.median(np.abs(lightcurve - median))
-    sigma = 1.4826 * mad
-    threshold = median + n_sigma * sigma
+    # median = np.median(lightcurve)
+    # mad = np.median(np.abs(lightcurve - median))
+    sigma = error
+    threshold = n_sigma * sigma
     #print(f'Median:{median}')
     #print(f'Threshold: {threshold}')
 
@@ -508,7 +508,7 @@ def main():
     parser.add_argument(
         "--crop_radius",
         type=int,
-        default=20,
+        default=50,
         help="Crop radius in pixels to crop cubes (default: 20)"
     )
 
