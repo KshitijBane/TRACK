@@ -230,8 +230,6 @@ def generate_event_animation(data, source_id, event_index, event, output_dir, bu
     ani.save(out_path, writer='pillow')
     plt.close(fig)
 
-
-
 #### Define Running  Median filter
 def detrend(lightcurve, window_fraction):
     if window_fraction is None or window_fraction == 0:
@@ -594,7 +592,10 @@ def main():
         for cube_slice in tqdm(cube_slices, desc="Processing cubes"):
             crops, time, header = process_cube_slice(cube_slice, sources, crop_radius)
             if first_header is None:
-                first_header = header.copy()
+
+                if header['BMAJ'] > 0.0 and header['BMIN'] > 0.0:
+                    # print(f"Beam info found in header: BMAJ={header['BMAJ']}, BMIN={header['BMIN']}")
+                    first_header = header.copy()
                 
             for i, crop, flux, ra, dec in crops:
         
