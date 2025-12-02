@@ -79,7 +79,7 @@ def read_central_lightcurve(fits_path):
         #Lightcurve
         data = hdul[0].data
         size = 5
-        offset = 20
+        offset = 10
         lightcurve = data[:, y-size:y+size, x-size:y+size]
         lightcurve = np.nansum(lightcurve,axis=(1,2))
         # lightcurve = lightcurve*factor
