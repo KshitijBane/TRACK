@@ -99,25 +99,72 @@ def read_central_lightcurve(fits_path):
 
 ### Define function to search traneint events
 def detect_transients(lightcurve, error, n_sigma):
+    """
+    Detect transients in a lightcurve using weighted statistics that account for errors.
+    
+    Parameters:
+    -----------
+    lightcurve : array-like
+        Flux values
+    error : array-like
+        Error/uncertainty for each flux value
+    n_sigma : float
+        Detection threshold in sigma units
+    
+    Returns:
+    --------
+    list of dicts with transient information
+    """
     if lightcurve is None or len(lightcurve) == 0:
         return []
-
-    # Compute robust baseline
-    # median = np.median(lightcurve)
-    # mad = np.median(np.abs(lightcurve - median))
-    # sigma = error
-    threshold = n_sigma * np.abs(error)  # Using provided error as noise estimate
-    #print(f'Median:{median}')
-    #print(f'Threshold: {threshold}')
-
+    
+    lightcurve = np.asarray(lightcurve)
+    error = np.asarray(error)
+    
+    # Validate error array
+    if error is None or len(error) == 0:
+        error = np.ones_like(lightcurve)  # Use uniform errors if not provided
+    
+    if len(error) != len(lightcurve):
+        error = np.ones_like(lightcurve)  # Use uniform errors if mismatch
+    
+    # Compute weighted median and robust baseline
+    # Use weighted median for better baseline estimation
+    weights = 1.0 / (error**2)  # Inverse variance weights
+    weights = weights / np.sum(weights)  # Normalize
+    
+    # Weighted median
+    sorted_indices = np.argsort(lightcurve)
+    sorted_flux = lightcurve[sorted_indices]
+    sorted_weights = weights[sorted_indices]
+    cumsum_weights = np.cumsum(sorted_weights)
+    median_idx = np.searchsorted(cumsum_weights, 0.5)
+    median = sorted_flux[median_idx]
+    
+    # Weighted MAD (Median Absolute Deviation)
+    abs_dev = np.abs(lightcurve - median)
+    sorted_abs_dev_idx = np.argsort(abs_dev)
+    sorted_abs_dev = abs_dev[sorted_abs_dev_idx]
+    sorted_weights_mad = weights[sorted_abs_dev_idx]
+    cumsum_weights_mad = np.cumsum(sorted_weights_mad)
+    mad_idx = np.searchsorted(cumsum_weights_mad, 0.5)
+    mad = sorted_abs_dev[mad_idx]
+    
+    sigma = 1.4826 * mad
+    
+    # Calculate significance for each point (accounting for individual errors)
+    # Significance = (flux - baseline) / sqrt(sigma^2 + error^2)
+    significance = (lightcurve - median) / np.sqrt(sigma**2 + error**2)
+    
+    threshold = n_sigma
+    
     # Get all indices above threshold
-    transient_indices = np.where(lightcurve >= threshold)[0]
+    transient_indices = np.where(significance >= threshold)[0]
     if len(transient_indices) == 0:
         return []
-
-
+    
     # Group indices allowing small gaps
-    max_gap=4
+    max_gap = 4
     events = []
     start = transient_indices[0]
     for i in range(1, len(transient_indices)):
@@ -126,29 +173,49 @@ def detect_transients(lightcurve, error, n_sigma):
             events.append((start, end))
             start = transient_indices[i]
     events.append((start, transient_indices[-1]))
-
+    
     # Gather event info
     result = []
     for start, end in events:
         duration = end - start + 1
-        if duration == 1 or start < 5 or start > len(lightcurve) - 5 :
-           continue  # Skip 1-index-long events, skip events in the beginning and end of the cube
-
         
-        peak_flux = np.max(lightcurve[start:end+1])
-        median = np.median(lightcurve)
-        sigma = np.median(np.abs(error))
-        snr = (peak_flux - median) / sigma
-        snr = round(snr, 3) 
+        # Skip 1-index-long events, skip events in the beginning and end
+        if duration == 1 or start < 5 or start > len(lightcurve) - 5:
+            continue
+        
+        # Event statistics (use weighted average for better accuracy)
+        event_slice = slice(start, end + 1)
+        event_flux = lightcurve[event_slice]
+        event_error = error[event_slice]
+        event_weights = 1.0 / (event_error**2)
+        event_weights = event_weights / np.sum(event_weights)
+        
+        # Weighted peak and mean
+        peak_flux = np.max(event_flux)
+        mean_flux = np.average(event_flux, weights=event_weights)
+        
+        # Peak significance
+        peak_idx = start + np.argmax(event_flux)
+        peak_significance = (peak_flux - median) / np.sqrt(sigma**2 + error[peak_idx]**2)
+        peak_snr = round(peak_significance, 3)
+        
+        # Integrated SNR (for the entire event)
+        # Sum of weighted significance across event
+        event_significance = np.sum(significance[event_slice] * event_weights)
         
         result.append({
             "start_index": start,
             "end_index": end,
-            "peak_flux": peak_flux,
-            "snr" : snr,
-            "duration": duration
+            "peak_flux": round(peak_flux, 6),
+            "mean_flux": round(mean_flux, 6),
+            "peak_snr": peak_snr,
+            "integrated_snr": round(event_significance, 3),
+            "duration": duration,
+            "peak_error": round(error[peak_idx], 6)
         })
+    
     return result
+
 
 
 ### Define function for plotting
