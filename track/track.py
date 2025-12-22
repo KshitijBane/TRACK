@@ -186,7 +186,7 @@ def plot_lightcurve_with_events(lightcurve, error, source_id, events, output_dir
 
     plt.xlabel("Time Slice Index")
     plt.ylabel("Flux (Jy/beam)")
-    plt.ylim([-0.5,4])
+    # plt.ylim()
     plt.title(f"Lightcurve for Source {source_id} (Central Pixel)")
     plt.grid(True)
     plt.tight_layout()
@@ -445,7 +445,7 @@ def process_cube_slice(cube_slice, sources, crop_radius):
         data = np.squeeze(data)
         
     wcs = WCS(header)
-    time = Time(header['DATE-OBS'], format='isot', scale='utc')
+    time = Time(header['TIME_mjd'], format='mjd', scale='tai')
     naxis1, naxis2 = header['NAXIS1'], header['NAXIS2']
     
     # Batch convert all source coordinates to pixel positions
